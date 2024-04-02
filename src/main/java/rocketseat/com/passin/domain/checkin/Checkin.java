@@ -24,7 +24,7 @@ public class Checkin {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-   // @OneToOne
+    @OneToOne
     @Column(name = "attendee_id", nullable = false)
     private Attendee attendee;
 }

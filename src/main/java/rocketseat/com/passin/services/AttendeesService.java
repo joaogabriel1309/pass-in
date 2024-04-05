@@ -22,7 +22,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AttendeesService {
     private final AttendeeRepository attendeeRepository;
-    private final CheckinRepository checkinRepository;
+    private final CheckInService checkInService;
+
     public List<Attendee> getAllAttendeesFromEvents(String eventId){
         return this.attendeeRepository.findByEventId(eventId);
     }
@@ -31,7 +32,7 @@ public class AttendeesService {
         List<Attendee> attendeeList = this.getAllAttendeesFromEvents(eventId);
 
         List<AttendeeDetails> attendeeDetailsList = attendeeList.stream().map(attendee -> {
-            Optional<Checkin> checkIn = this.checkinRepository.findByAttendeeId(attendee.getId());
+            Optional<Checkin> checkIn = this.checkInService.getCheckIn(attendee.getId());
             LocalDateTime checkedInAt = checkIn.<LocalDateTime>map(Checkin::getCreatedAt).orElse(null);
             return new AttendeeDetails(attendee.getId(), attendee.getName(), attendee.getEmail(), attendee.getCreatedAt(), checkedInAt);
         }).toList();
@@ -50,11 +51,20 @@ public class AttendeesService {
     }
 
     public AttendeeBadgeResponseDTO getAttendeeBadge(String attendeeId, UriComponentsBuilder uriComponentsBuilder){
-        Attendee attendee = this.attendeeRepository.findById(attendeeId).orElseThrow(() -> new EventNotFoundException("Attendee not found whit id " + attendeeId));
+        Attendee attendee = this.getAttendee(attendeeId);
 
         var uri = uriComponentsBuilder.path("/attendee/{attendeeId}/check-in").buildAndExpand(attendeeId).toUri().toString();
 
         AttendeeBadgeDTO attendeeBadgeDTO = new AttendeeBadgeDTO(attendee.getName(), attendee.getEmail(), uri, attendee.getEvent().getId());
         return new AttendeeBadgeResponseDTO(attendeeBadgeDTO);
+    }
+
+    public void checkInAttendee(String attendeeId){
+        Attendee attendee = this.getAttendee(attendeeId);
+        this.checkInService.registerCheckIn(attendee);
+    }
+
+    public Attendee getAttendee (String attendeeId){
+        return this.attendeeRepository.findById(attendeeId).orElseThrow(() -> new EventNotFoundException("Attendee not found whit id " + attendeeId));
     }
 }
